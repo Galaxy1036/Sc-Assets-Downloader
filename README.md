@@ -1,7 +1,10 @@
 # Sc-Assets-Downloader
   Assets Downloader for Supercell Games
-  run it with:
-    <code> python Main.py </code>
+  Run it with:
+    `python Main.py`
+    
+   For more information type:
+     `python Main.py -h`
     
 # Warning
 
