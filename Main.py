@@ -24,6 +24,7 @@ if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description='Download assets from official servers')
 	parser.add_argument('-s', help='Download only files with specified extension', type=str, nargs='+')
+	parser.add_argument('-d', help='Decompress Csv and .sc files (tex.sc included)', action='store_true')
 	args = parser.parse_args()
 
 	s = socket.socket()
@@ -48,7 +49,7 @@ if __name__ == '__main__':
 	Json = json.loads(FingerPrint)
 	print('[INFO] Version = {}, MasterHash = {}'.format(Json['version'],Json['sha']))
 	if args.s:	
-		StartDownload(AssetsUrl,Json,tuple(args.s))
+		StartDownload(AssetsUrl,Json,tuple(args.s),args.d)
 	else:
-		StartDownload(AssetsUrl,Json)
+		StartDownload(AssetsUrl,Json,IncludeDecompression= args.d)
 
