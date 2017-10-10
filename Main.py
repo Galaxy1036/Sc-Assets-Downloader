@@ -43,7 +43,13 @@ if __name__ == '__main__':
 		sys.exit()
 
 	FingerPrint = Reader.read_string()
-	Reader.read_string()
+	Reader.read_string()#null
+	Reader.read_string()#null
+	Reader.read_string()#null
+	Reader.read_short()
+	Reader.read_string()#null
+	Reader.read_byte()
+	Reader.read_string()#Event Assets Url
 	AssetsUrl = Reader.read_string()
 
 	Json = json.loads(FingerPrint)
