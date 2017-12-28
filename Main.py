@@ -5,6 +5,8 @@ from Packet.Reader import *
 from Packet.PreAuth import *
 from Downloader import *
 import socket
+import ctypes
+import os
 import argparse
 import json
 import sys
@@ -27,6 +29,12 @@ if __name__ == '__main__':
 	parser.add_argument('-d', help='Decompress Csv and .sc files (tex.sc included)', action='store_true')
 	args = parser.parse_args()
 
+	if os.name == "nt":
+		ctypes.windll.kernel32.SetConsoleTitleW("Starting download")
+
+	else:
+		sys.stdout.write("\x1b]2;Starting download\x07")
+
 	s = socket.socket()
 	s.connect(('game.clashroyaleapp.com',9339))
 	s.send(Write(PreAuth))
@@ -46,12 +54,12 @@ if __name__ == '__main__':
 	Reader.read_string()#null
 	Reader.read_string()#null
 	Reader.read_string()#null
-	Reader.read_short()
+	Reader.read_short() #Apparently vInt + Byte 
 	Reader.read_string()#null
-	Reader.read_byte()
+	Reader.read_byte() #Apparently vInt
 	Reader.read_string()#Event Assets Url
 	AssetsUrl = Reader.read_string()
-
+	
 	Json = json.loads(FingerPrint)
 	print('[INFO] Version = {}, MasterHash = {}'.format(Json['version'],Json['sha']))
 	if args.s:	
