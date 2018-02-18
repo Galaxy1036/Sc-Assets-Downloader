@@ -1,120 +1,132 @@
 # -*- coding: utf-8 -*-
-from threading import Thread 
-from urllib.request import urlopen
-from AssetsDecompressor import *
+
 import os
+import sys
 import json
 import ctypes
-import sys
+
+from threading import Thread
+from urllib.request import urlopen
+
+from AssetsDecompressor import Decompress
+
 
 class Downloader(Thread):
 
-	ThreadNumber    = 0
-	StartPoint      = 0
-	FilesCount      = 0
-	FilesDownloaded = 0
+    threadNumber    = 0
+    startPoint      = 0
+    filesCount      = 0
+    filesDownloaded = 0
 
-	def __init__(self,AssetsUrl,FingerPrint,DownloadPath,SpecificFile,IncludeDecompression):
-		Downloader.ThreadNumber   += 1
-		Thread.__init__(self)
-		self.AssetsUrl            = AssetsUrl
-		self.FingerPrint          = FingerPrint
-		self.DownloadPath         = DownloadPath
-		self.SpecificFile         = SpecificFile
-		self.IncludeDecompression = IncludeDecompression
+    def __init__(self, assetsUrl, fingerprint, downloadPath, specificFile, includeDecompression, overwrite):
+        Downloader.threadNumber   += 1
+        Thread.__init__(self)
+        self.assetsUrl            = assetsUrl
+        self.fingerprint          = fingerprint
+        self.downloadPath         = downloadPath
+        self.specificFile         = specificFile
+        self.includeDecompression = includeDecompression
+        self.overwrite            = overwrite
 
-	@classmethod
-	def GetThreadNumber(cls):
-		return cls.ThreadNumber
+    @classmethod
+    def GetThreadNumber(cls):
+        return cls.threadNumber
 
-	@classmethod
-	def GetStartPoint(cls):
-		try:
-			return cls.StartPoint
-		finally:
-			cls.StartPoint += 1
+    @classmethod
+    def GetStartPoint(cls):
+        try:
+            return cls.startPoint
 
-	def run(self):
-		Info = self.GetStartPoint(),self.GetThreadNumber()
-		MasterHash = self.FingerPrint['sha']
+        finally:
+            cls.startPoint += 1
 
-		if self.SpecificFile:
-			for i in self.FingerPrint['files']:
-				if i['file'].endswith(self.SpecificFile):
-					Downloader.FilesCount += 1 / Info[1]
-		else:
-			Downloader.FilesCount = len(self.FingerPrint['files'])
+    def run(self):
+        info = self.GetStartPoint(), self.GetThreadNumber()
+        masterHash = self.fingerprint['sha']
 
-		for i in range(Info[0],len(self.FingerPrint['files']),Info[1]):
-			DirName = self.DownloadPath + '/' + MasterHash +'/'
-			FileName = self.FingerPrint['files'][i]['file']
-			FileUrl = self.AssetsUrl + '/' + MasterHash + '/' + FileName
-			if self.SpecificFile:
-				if FileName.endswith(self.SpecificFile):
-					if self.IncludeDecompression:
-						if FileName.endswith(('.csv','.sc')):
-							self.downloadFile(FileUrl,DirName,FileName,True)
+        if self.specificFile:
+            for i in self.fingerprint['files']:
+                if i['file'].endswith(self.specificFile):
+                    Downloader.filesCount += 1 / info[1]
 
-						else:
-							self.downloadFile(FileUrl,DirName,FileName)
+        else:
+            Downloader.filesCount = len(self.fingerprint['files'])
 
-					else:
-						self.downloadFile(FileUrl,DirName,FileName)
+        for i in range(info[0], len(self.fingerprint['files']), info[1]):
 
-			else:
-				if self.IncludeDecompression:
-					if FileName.endswith(('.csv','.sc')):
-						self.downloadFile(FileUrl,DirName,FileName,True)
+            dirName = self.downloadPath + '/' + masterHash + '/'
+            fileName = self.fingerprint['files'][i]['file']
+            fileUrl = self.assetsUrl + '/' + masterHash + '/' + fileName
 
-					else:
-						self.downloadFile(FileUrl,DirName,FileName)
+            if self.specificFile:
+                if fileName.endswith(self.specificFile):
+                    self.downloadFile(fileUrl, dirName, fileName)
 
-				else:
-					self.downloadFile(FileUrl,DirName,FileName)
+            else:
+                self.downloadFile(fileUrl, dirName, fileName)
 
-	def downloadFile(self,FileUrl,DirName,FileName,decompress=False):
+    def downloadFile(self, fileUrl, dirName, fileName):
+        filePath = dirName + fileName
 
-		FilePath = DirName + FileName
-		if os.path.exists(FilePath):
-			print('[*] {} was already downloaded'.format(FileUrl.split('/')[-1]))
+        if os.path.exists(filePath) and not self.overwrite:
+            print('[*] {} was already downloaded'.format(fileUrl.split('/')[-1]))
+            self.updateConsoleTitle()
 
-		else:
-			File = urlopen(FileUrl)
-			print('[*] {} has been downloaded'.format(FileUrl.split('/')[-1]))
-			os.makedirs(os.path.dirname(DirName + FileName), exist_ok=True)
-			with open(DirName + FileName,'wb') as f:
-				if decompress:
-					f.write(Decompressor(File.read(),FileName))
-					f.close()
+        else:
+            file = urlopen(fileUrl)
+            print('[*] {} has been downloaded'.format(fileUrl.split('/')[-1]))
+            os.makedirs(os.path.dirname(dirName + fileName), exist_ok=True)
 
-				else:
-					f.write(File.read())
-					f.close()
+            with open(dirName + fileName, 'wb') as f:
+                if self.includeDecompression and fileName.endswith(('.csv', '.sc')):
+                    f.write(Decompress(file.read(), fileName))
+                    f.close()
 
-		Downloader.FilesDownloaded += 1
-		if os.name == "nt":
-			ctypes.windll.kernel32.SetConsoleTitleW("Download [{}/{}]".format((Downloader.FilesDownloaded),round(Downloader.FilesCount)))
+                else:
+                    f.write(file.read())
+                    f.close()
 
-		else:
-			sys.stdout.write("\x1b]2;Download [{}/{}]\x07".format((Downloader.FilesDownloaded),round(Downloader.FilesCount)))
+            self.updateConsoleTitle()
 
-	
-def StartDownload(AssetsUrl,FingerPrint,SpecificFile=None,IncludeDecompression = None):
-	if os.path.exists('config.json'):
-		with open('config.json','r') as f:
-			Config = json.load(f)
-			ThreadCount = Config['ThreadNumber']
-			DownloadPath = Config['DownloadPath']
-	else:
-		ThreadCount = 4
-		DownloadPath = 'Download/'
+    def updateConsoleTitle(self):
+        Downloader.filesDownloaded += 1
 
-	print('[*] Start download with {} threads'.format(ThreadCount))
+        if os.name == "nt":
+            ctypes.windll.kernel32.SetConsoleTitleW("Download [{}/{}] ({} %)".format((Downloader.filesDownloaded), round(Downloader.filesCount), round(Downloader.filesDownloaded / Downloader.filesCount * 100)))
 
-	for i in range(ThreadCount):
+        else:
+            sys.stdout.write("\x1b]2;Download [{}/{}]\x07".format((Downloader.filesDownloaded), round(Downloader.filesCount)))
 
-		locals()['Thread{}'.format(i)] = Downloader(AssetsUrl,FingerPrint,DownloadPath,SpecificFile,IncludeDecompression)
 
-	for i in range(ThreadCount):
-		
-		locals()['Thread{}'.format(i)].start()
+def StartDownload(assetsUrl, fingerprint, args):
+    if os.path.exists('config.json'):
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+            threadCount = config['ThreadNumber']
+            downloadPath = config['DownloadPath']
+
+    else:
+        threadCount = 4
+        downloadPath = 'Download/'
+
+    print('[*] Start download with {} threads'.format(threadCount))
+
+    for i in range(threadCount):
+        locals()['Thread{}'.format(i)] = Downloader(assetsUrl, fingerprint, downloadPath, tuple(args.specific), args.decompress, args.overwrite)
+
+    for i in range(threadCount):
+        locals()['Thread{}'.format(i)].start()
+
+    if args.fingerprint:
+        if os.path.exists(downloadPath + '/' + fingerprint['sha'] + '/fingerprint.json') and not args.overwrite:
+            print('[*] fingerprint.json already downloaded')
+
+        else:
+            downloadedFingerPrint = urlopen(assetsUrl + '/' + fingerprint['sha'] + '/fingerprint.json')
+            os.makedirs(os.path.dirname(downloadPath + '/' + fingerprint['sha'] + '/fingerprint.json'), exist_ok=True)
+
+            with open(downloadPath + '/' + fingerprint['sha'] + '/fingerprint.json', 'wb') as f:
+                f.write(downloadedFingerPrint.read())
+                f.close()
+
+            print('[*] fingerprint.json has been downloaded')

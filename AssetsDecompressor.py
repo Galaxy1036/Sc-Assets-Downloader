@@ -1,34 +1,42 @@
 # -*- coding: utf-8 -*-
+
 import lzma
 
-def Decompressor(File,Filename):
 
-	Decompressor = lzma.LZMADecompressor()
+def Decompress(file, filename):
 
-	if Filename.endswith('.csv'): #CSV decompression
+    decompressor = lzma.LZMADecompressor()
 
-		Data = File[0:8] + (b'\x00' * 4) + File[8:]
+    if filename.endswith('.csv'):  # CSV decompression
+        data = file[0:8] + (b'\x00' * 4) + file[8:]
 
-		try:
-			Decompressed = Decompressor.decompress(Data)
-			print('[*] {} succesfully decompressed'.format(Filename.split('/')[-1]))
-		except:
-			Decompressed = File
-			print("[*] File can't be decompressed")
+        try:
+            decompressed = decompressor.decompress(data)
+            print('[*] {} succesfully decompressed'.format(filename.split('/')[-1]))
 
-		return Decompressed
+        except lzma.LZMAError:
+            decompressed = file
+            print("[*] File can't be decompressed")
 
-	if Filename.endswith('.sc'): #SC decompression (only lzma :/)
+        except Exception as exception:
+            decompressed = file
+            print('[*] Unknowed error happened while decompression ({})'.format(exception.__class__.__name__))
 
-		NoHeader = File[26:]
+        return decompressed
 
-		Data = NoHeader[0:9] + (b'\x00' * 4) + NoHeader[9:]
+    if filename.endswith('.sc'):  # SC decompression (only lzma :/)
+        data = file[26:35] + (b'\x00' * 4) + file[35:]
 
-		try:
-			Decompressed = Decompressor.decompress(Data)
-			print('[*] {} succesfully decompressed'.format(Filename.split('/')[-1]))
-		except:
-			Decompressed = File
-			print("[*] File can't be decompressed")
+        try:
+            decompressed = decompressor.decompress(data)
+            print('[*] {} succesfully decompressed'.format(filename.split('/')[-1]))
 
-		return Decompressed
+        except lzma.LZMAError:
+            decompressed = file
+            print("[*] File can't be decompressed")
+
+        except Exception as exception:
+            decompressed = file
+            print('[*] Unknowed error happened while decompression ({})'.format(exception.__class__.__name__))
+
+        return decompressed

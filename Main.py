@@ -1,69 +1,79 @@
 # -*- coding: utf-8 -*-
 
-from Packet.Writer import *
-from Packet.Reader import * 
-from Packet.PreAuth import *
-from Downloader import *
-import socket
-import ctypes
 import os
-import argparse
-import json
 import sys
+import json
+import ctypes
+import socket
+import argparse
 
-def recvall(sock,size):
-	data = []
-	while size > 0:
-		sock.settimeout(5.0)
-		s = sock.recv(size)
-		sock.settimeout(None)
-		if not s: raise EOFError
-		data.append(s)
-		size -= len(s)
-	return b''.join(data)
+from Downloader import *
+from Packet.Reader import *
+from Packet.Writer import *
+from Packet.PreAuth import *
+
+
+def recvall(sock, size):
+    data = []
+    while size > 0:
+        sock.settimeout(5.0)
+        s = sock.recv(size)
+        sock.settimeout(None)
+        if not s:
+            raise EOFError
+        data.append(s)
+        size -= len(s)
+    return b''.join(data)
+
 
 if __name__ == '__main__':
 
-	parser = argparse.ArgumentParser(description='Download assets from official servers')
-	parser.add_argument('-s', help='Download only files with specified extension', type=str, nargs='+')
-	parser.add_argument('-d', help='Decompress Csv and .sc files (tex.sc included)', action='store_true')
-	args = parser.parse_args()
+    parser = argparse.ArgumentParser(description='Download assets from official servers')
+    parser.add_argument('-s', '--specific', help='Download only files with specified extension', type=str, nargs='+', default=[])
+    parser.add_argument('-d', '--decompress', help='Decompress .csv and .sc files (tex.sc included)', action='store_true')
+    parser.add_argument('-o', '--overwrite', help='Overwrite already existing files', action='store_true')
+    parser.add_argument('-f', '--fingerprint', help='Download fingerprint.json', action='store_true')
 
-	if os.name == "nt":
-		ctypes.windll.kernel32.SetConsoleTitleW("Starting download")
+    args = parser.parse_args()
 
-	else:
-		sys.stdout.write("\x1b]2;Starting download\x07")
+    if os.name == "nt":
+        ctypes.windll.kernel32.SetConsoleTitleW("Starting download")
 
-	s = socket.socket()
-	s.connect(('game.clashroyaleapp.com',9339))
-	s.send(Write(PreAuth))
+    else:
+        sys.stdout.write("\x1b]2;Starting download\x07")
 
-	Header = s.recv(7)
-	size = int.from_bytes(Header[2:5],'big')
-	print('[*] Receiving {}'.format(int.from_bytes(Header[:2],'big')))
-	data = recvall(s,size)
-	Reader = CoCMessageReader(data)
-	if Reader.read_rrsint32() == 7:
-		print('[*] FingerPrint has been received')
-	else:
-		print('[*] PreAuth packet is outdated , please get the latest one on GaLaXy1036 Github !')
-		sys.exit()
+    s = socket.socket()
+    s.connect(('game.clashroyaleapp.com', 9339))
+    s.send(Write(PreAuth))
 
-	FingerPrint = Reader.read_string()
-	Reader.read_string()#null
-	Reader.read_string()#null
-	Reader.read_string()#null
-	Reader.read_short() #Apparently vInt + Byte 
-	Reader.read_string()#null
-	Reader.read_byte() #Apparently vInt
-	Reader.read_string()#Event Assets Url
-	AssetsUrl = Reader.read_string()
-	
-	Json = json.loads(FingerPrint)
-	print('[INFO] Version = {}, MasterHash = {}'.format(Json['version'],Json['sha']))
-	if args.s:	
-		StartDownload(AssetsUrl,Json,tuple(args.s),args.d)
-	else:
-		StartDownload(AssetsUrl,Json,IncludeDecompression= args.d)
+    header = s.recv(7)
+    size = int.from_bytes(header[2:5], 'big')
 
+    print('[*] Receiving {}'.format(int.from_bytes(header[:2], 'big')))
+
+    data = recvall(s, size)
+    Reader = CoCMessageReader(data)
+
+    if Reader.read_rrsint32() == 7:
+        print('[*] FingerPrint has been received')
+
+    else:
+        print('[*] PreAuth packet is outdated , please get the latest one on GaLaXy1036 Github !')
+        sys.exit()
+
+    fingerprint = Reader.read_string()
+    Reader.read_string()  # null
+    Reader.read_string()  # null
+    Reader.read_string()  # null
+    Reader.read_rrsint32()
+    Reader.read_byte()
+    Reader.read_string()  # null
+    Reader.read_rrsint32()
+    Reader.read_string()  # Event Assets Url
+    assetsUrl = Reader.read_string()
+
+    Json = json.loads(fingerprint)
+
+    print('[INFO] Version = {}, MasterHash = {}'.format(Json['version'], Json['sha']))
+
+    StartDownload(assetsUrl, Json, args)
