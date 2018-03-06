@@ -95,7 +95,7 @@ class Downloader(Thread):
             ctypes.windll.kernel32.SetConsoleTitleW("Download [{}/{}] ({} %)".format((Downloader.filesDownloaded), round(Downloader.filesCount), round(Downloader.filesDownloaded / Downloader.filesCount * 100)))
 
         else:
-            sys.stdout.write("\x1b]2;Download [{}/{}]\x07".format((Downloader.filesDownloaded), round(Downloader.filesCount)))
+            sys.stdout.write("\x1b]2;Download [{}/{}] ({} %)\x07".format((Downloader.filesDownloaded), round(Downloader.filesCount), round(Downloader.filesDownloaded / Downloader.filesCount * 100)))
 
 
 def StartDownload(assetsUrl, fingerprint, args):
@@ -109,13 +109,15 @@ def StartDownload(assetsUrl, fingerprint, args):
         threadCount = 4
         downloadPath = 'Download/'
 
+    threadList = []
+
     print('[*] Start download with {} threads'.format(threadCount))
 
     for i in range(threadCount):
-        locals()['Thread{}'.format(i)] = Downloader(assetsUrl, fingerprint, downloadPath, tuple(args.specific), args.decompress, args.overwrite)
+        threadList.append(Downloader(assetsUrl, fingerprint, downloadPath, tuple(args.specific), args.decompress, args.overwrite))
 
-    for i in range(threadCount):
-        locals()['Thread{}'.format(i)].start()
+    for thread in threadList:
+        thread.start()
 
     if args.fingerprint:
         if os.path.exists(downloadPath + '/' + fingerprint['sha'] + '/fingerprint.json') and not args.overwrite:

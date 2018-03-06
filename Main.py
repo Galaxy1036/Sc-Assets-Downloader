@@ -7,10 +7,10 @@ import ctypes
 import socket
 import argparse
 
-from Downloader import *
-from Packet.Reader import *
-from Packet.Writer import *
-from Packet.PreAuth import *
+from Downloader import StartDownload
+from Packet.Reader import CoCMessageReader
+from Packet.Writer import Write
+from Packet.PreAuth import PreAuth
 
 
 def recvall(sock, size):
