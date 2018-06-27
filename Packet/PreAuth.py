@@ -13,7 +13,7 @@ class PreAuth(Writer):
         self.putInt(19)
         self.putInt(3)
         self.putInt(0)
-        self.putInt(1185)
+        self.putInt(1186)
         self.putString('')
         self.putInt(2)
         self.putInt(2)
