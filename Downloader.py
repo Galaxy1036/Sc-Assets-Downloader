@@ -73,7 +73,12 @@ class Downloader(Thread):
             self.updateConsoleTitle()
 
         else:
-            file = urlopen(fileUrl)
+            try:
+                file = urlopen(fileUrl)
+
+            except:
+                print('[*] Error while downloading {}'.format(fileUrl.split('/')[-1]))
+
             print('[*] {} has been downloaded'.format(fileUrl.split('/')[-1]))
             os.makedirs(os.path.dirname(dirName + fileName), exist_ok=True)
 
