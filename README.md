@@ -1,3 +1,6 @@
+# Deprecated
+This project is not maintained anymore, please look at [SC-Assets-Downloader-GUI](https://github.com/Galaxy1036/SC-Assets-Downloader-GUI).
+
 # Sc-Assets-Downloader
   Assets Downloader for Supercell Games
   Run it with:
